@@ -7,6 +7,7 @@ Appliance intake and inventory for iPhone, Android and desktop browsers. Start w
 - Appliance and identification-tag photos, reviewed and rotated into the actual saved pixels.
 - Locally executed Tesseract OCR, with independent spoken/typed identifiers and exact comparison.
 - Your uploaded voice instructions, browser/keyboard dictation and spoken readback.
+- Store location choices for Ball · K&T Appliances and Alexandria · Fussell Appliances, with free entry for other locations.
 - Offline intake: multiple saved items and their photos stay in IndexedDB, with a persistent upload queue, local inventory view and visible sync status.
 - An offline app shell after the initial online load, plus shared D1 inventory and private R2 photo/audio storage.
 - Optimistic revisions, duplicate brand/serial protection, retry-safe saves and explicit ready status.
