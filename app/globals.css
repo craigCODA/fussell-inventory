@@ -8,3 +8,5 @@
 
 /* Keep supporting text readable on bright warehouse and phone screens. */
 .sidebar-note p,.page-heading p,.stat small,.appliance-link small,.identifier-cell small,.table-footer,.page-footer,.empty-state p,.empty-steps,.empty-steps b,.section-intro p,.field-hint,.prompt-card p,.export-option p,.help-content li p,.help-content>p,.save-status,.transcript,.ocr-callout p{color:#687a65}.inventory-table th{color:#657660}.inventory-table .identifier-cell{font-size:12px}.inventory-table .identifier-cell small{font-size:11px}.filter-tabs button{color:#6b7b63}.reading>span{color:#777b63}.photo-target small{color:#6c8061}.field input::placeholder,.field textarea::placeholder{color:#79896e}.search input::placeholder{color:#76836d}
+
+.delete-section{border-top:1px solid var(--line);margin-top:26px;padding-top:20px}.button.danger{color:#9b3029;border-color:#d9aaa3;background:#fff7f5}.button.danger:hover:not(:disabled){background:#fbe9e5}.delete-section p{margin:8px 0 14px}

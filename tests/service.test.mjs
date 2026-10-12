@@ -1,8 +1,6 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {DatabaseSync} from 'node:sqlite';import fs from 'node:fs';
+import test from 'node:test';import assert from 'node:assert/strict';import {env} from './helpers/storage.mjs';
 import {handleApi} from '../lib/service.mjs';
-function env(){const sql=new DatabaseSync(':memory:');for(const f of fs.readdirSync('migrations').filter(f=>f.endsWith('.sql')).sort())sql.exec(fs.readFileSync('migrations/'+f,'utf8'));
- const prep=(query,args=[])=>({bind(...a){return prep(query,a)},async first(){return sql.prepare(query).get(...args)??null},async all(){return {results:sql.prepare(query).all(...args)}},async run(){const r=sql.prepare(query).run(...args);return {meta:{changes:r.changes}}}});
- const store=new Map();return {DB:{prepare:prep,async batch(s){sql.exec('BEGIN');try{const out=[];for(const q of s)out.push(await q.run());sql.exec('COMMIT');return out}catch(e){sql.exec('ROLLBACK');throw e}}},BUCKET:{async put(k,b,o){store.set(k,{body:b,httpMetadata:o.httpMetadata})},async get(k){return store.get(k)||null},async delete(k){store.delete(k)}}};}
+
 const user={userId:'operator-1',email:'operator@example.com'};
 const rec=(id='a118d0ab-bafe-4800-b479-44a2aa113acf')=>({id,inventoryId:'FA-TEST',status:'draft',type:'Dryer',brand:'Samsung',serial:'0ABC',model:'DV-1234',price:'399',cost:'100'});
 const req=(path,body,method=body?'POST':'GET')=>new Request('https://app.test/api/'+path,{method,...body?{headers:{'content-type':'application/json'},body:JSON.stringify(body)}:{}});

@@ -10,6 +10,8 @@ Appliance intake and inventory for iPhone, Android and desktop browsers. Start w
 - Local draft recovery plus shared D1 inventory and private R2 photo/audio storage.
 - Optimistic revisions, duplicate brand/serial protection, retry-safe saves and explicit ready status.
 - Selected-record CSV exports. KORONA product CSV includes prices; stock receipt remains a separate operation.
+- Export selection follows the current view; archived or filtered-out entries stop counting as selected.
+- Confirmed permanent deletion from an entry's Review step, including unused attached photos. Archived entries can be found through the status filter. A deletion audit entry is retained.
 
 ## Architecture
 
@@ -26,6 +28,13 @@ npm ci
 npm test
 npm run build
 npm run check:deploy
+```
+
+Browser regressions exercise phone and desktop layouts against the real API handler with temporary SQLite and file storage:
+
+```sh
+npx playwright install chromium --only-shell
+npm run test:browser
 ```
 
 `npm run check:deploy` bundles the Worker without publishing. Set the real Database ID and create the R2 bucket before `npm run deploy`. Use `npm run db:migrate` to apply migrations to the configured remote D1 database.
