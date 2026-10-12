@@ -2,6 +2,9 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "fussell-inventory",
   "main": "worker/index.mjs",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{"pattern": "inventory.craigcoda.fyi", "custom_domain": true}],
   "compatibility_date": "2026-05-15",
   "keep_vars": true,
   "assets": {
