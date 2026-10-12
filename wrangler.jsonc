@@ -7,6 +7,9 @@
   "routes": [{"pattern": "inventory.craigcoda.fyi", "custom_domain": true}],
   "compatibility_date": "2026-05-15",
   "keep_vars": true,
+  "vars": {
+    "POLICY_AUD": "ddfa27e8d0ef319f88df2e62295e0f1c76b317e93edb388871ccaf2a584cf83b"
+  },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
