@@ -13,7 +13,7 @@
   "d1_databases": [{
     "binding": "DB",
     "database_name": "fussell-inventory-db",
-    "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+    "database_id": "9ca19cf5-badd-4ba1-8276-31f78371e167",
     "migrations_dir": "migrations"
   }],
   "r2_buckets": [{"binding": "BUCKET", "bucket_name": "fussell-inventory-photos"}],
