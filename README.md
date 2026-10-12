@@ -11,7 +11,8 @@ Appliance intake and inventory for iPhone, Android and desktop browsers. Start w
 - Offline intake: multiple saved items and their photos stay in IndexedDB, with a persistent upload queue, local inventory view and visible sync status.
 - An offline app shell after the initial online load, plus shared D1 inventory and private R2 photo/audio storage.
 - Optimistic revisions, duplicate brand/serial protection, retry-safe saves and explicit ready status.
-- Selected-record CSV exports work offline. KORONA product CSV includes prices; stock receipt remains a separate operation.
+- Recieving holds incoming appliances; Inventory holds exported appliances. Export dates persist locally and sync between devices without changing appliance status or store location.
+- One export action prepares two separate CSV downloads: complete inventory for all selected records and KORONA products with prices for eligible ready records. Exports work offline, with individual download links for browsers that restrict multiple downloads. Stock receipt remains a separate operation.
 - Export selection follows the current view; archived or filtered-out entries stop counting as selected.
 - Confirmed permanent deletion from an entry's Review step while online and synced, including unused attached photos. Archived entries can be found through the status filter. A deletion audit entry is retained.
 
@@ -56,6 +57,8 @@ Sync runs when the app is open, on reconnect/reopen and periodically while visib
 Browser storage is finite. The app requests persistent storage where supported, but private browsing, clearing site data, device loss or browser eviction can remove unsynced work. A failed local write never reports a local save; when online, the existing direct server save is used as a fallback. First use of OCR downloads its files. Camera and dictation depend on device/browser support; typing and photo selection remain available.
 
 CSV generation works from the local records. Photo links for newly captured images become available after upload; the CSV does not embed photo files. A synced copy in Cloudflare protects against loss of this device's browser data.
+
+The app moves records to Inventory after preparing their CSV files and requesting the downloads. Browsers do not confirm that a user kept the files, and this does not confirm a KORONA import. Only records included in a generated file are marked; an inventory-only export can include drafts. Files can be exported again from Inventory. If export tracking fails to save, the prepared files remain available with a retry button, and no successful move is reported. Export tracking requires working device storage. Earlier downloads were not tracked, so existing records start in Recieving until exported again. The legacy read-only API export endpoint does not mark records as processed.
 
 Google Drive sync and direct KORONA synchronization are not connected. General CSV photo links require app access. KORONA categories, price-group mapping and receiving workflow must be confirmed for the store. Data entered in the earlier hosted test is not automatically migrated.
 

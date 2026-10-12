@@ -98,7 +98,17 @@ The app verifies token signature, expiration, issuer and audience. An unprotecte
 4. Save, reopen the record and verify both images. Check the same record from a desktop.
 5. Open the same address using her email and confirm access.
 6. Upload your voice clips through **Spoken instructions**.
-7. Export one ready record and verify the KORONA field mapping before importing a batch.
+7. In **Recieving**, select one ready record and choose **Export → Download both CSVs**. Verify the KORONA field mapping before importing a batch.
+
+## Recieving and Inventory
+
+New records appear in **Recieving**. Exporting prepares the files and moves the included appliances to **Inventory**, where you can manage or export them again. The **All Appliances** subtab has been removed; use the status buttons or the **All active** dropdown to filter either tab.
+
+**Download both CSVs** produces two separate files. The complete inventory file includes every selected record. The KORONA file includes only complete, reviewed ready records. The export screen also has individual file buttons and download links in case your phone blocks a second automatic download.
+
+An export date records that files were prepared and their downloads requested. It does not mean KORONA imported the items. Appliance status and store location stay the same. Existing items with earlier, untracked downloads begin in Recieving until you export them again.
+
+Moving an exported item to Inventory works offline and syncs when the app reconnects. If the move cannot be saved to device storage, the app keeps the file links available and offers **Retry moving to inventory**.
 
 ## Test offline intake
 
@@ -112,7 +122,7 @@ Use the same browser and keep its site data until everything has synced. Browser
 
 ## What is already checked
 
-The shared inventory logic has automated coverage for identifiers, pricing, CSV, stored records, duplicate identifiers, revisions and upload retries. Browser regressions cover offline photos and multiple entries, reload/reconnection, offline KORONA CSV generation, expired sign-in, a lost save response and failed local storage. The standalone version also has signed-token authentication tests and a Cloudflare deployment dry run. Physical iPhone/Android camera, microphone and final account integration checks still require the devices and your Cloudflare account.
+The shared inventory logic has automated coverage for identifiers, pricing, CSV, stored records, duplicate identifiers, revisions and upload retries. Browser regressions cover phone and desktop workspace tabs, paired exports, mixed draft/ready selections, offline photos and multiple entries, reload/reconnection, export tracking on a second device, expired sign-in, a lost save response and failed local storage. The standalone version also has signed-token authentication tests and a Cloudflare deployment dry run. Physical iPhone/Android camera, microphone and final account integration checks still require the devices and your Cloudflare account.
 
 ## Reference documentation
 

@@ -1,4 +1,5 @@
 export type Appliance={
+ exportedAt?:string;exportKinds?:Array<'inventory'|'korona'>;
  syncState?:'pending'|'synced'|'error';syncError?:string;localFront?:Blob;localTag?:Blob;
  id:string;inventoryId:string;type:string;brand:string;model:string;serial:string;location:string;bin:string;condition:string;testStatus:string;status:string;price:string;cost:string;notes:string;frontKey:string;tagKey:string;ocrModel:string;ocrSerial:string;ocrText:string;modelReviewed:boolean;serialReviewed:boolean;revision?:number;createdAt?:string;updatedAt?:string;updatedBy?:string;
 };

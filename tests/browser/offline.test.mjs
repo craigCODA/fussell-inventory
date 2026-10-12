@@ -56,7 +56,7 @@ async function createItem(page,name,ready=false){
 }
 
 test('two offline entries and their photos survive a reload and sync after reconnection',async t=>{
- const {page,context,e}=await fixture(t);
+ const {page,context,e,origin}=await fixture(t);
  await context.setOffline(true);await createItem(page,'Offline one');await createItem(page,'Offline two',true);
  assert.equal((await e.DB.prepare('SELECT * FROM appliances').all()).results.length,0);
  await page.getByText('2 waiting to sync',{exact:true}).waitFor();
@@ -64,12 +64,26 @@ test('two offline entries and their photos survive a reload and sync after recon
  assert.equal(await page.locator('.mobile-record img').count(),2);
  const ready=page.locator('.mobile-record').filter({hasText:'Offline two'});
  await ready.getByRole('checkbox').check();await page.getByRole('button',{name:'Export (1)',exact:true}).click();
- const downloadPromise=page.waitForEvent('download');await page.getByRole('button',{name:'Download KORONA CSV',exact:true}).click();
- const csv=await fs.readFile(await (await downloadPromise).path(),'utf8');assert.ok(csv.includes('Offline two'));assert.ok(csv.includes('25.00'));assert.ok(!csv.includes('Offline one'));
+ const downloads=[];page.on('download',d=>downloads.push(d));
+ await page.getByRole('button',{name:'Download both CSVs',exact:true}).click();
+ await page.getByRole('button',{name:'View inventory',exact:true}).click();
+ assert.equal(downloads.length,2);
+ for(const download of downloads){const csv=await fs.readFile(await download.path(),'utf8');assert.ok(csv.includes('Offline two'));if(download.suggestedFilename().includes('korona'))assert.ok(csv.includes('25.00'));assert.ok(!csv.includes('Offline one'))}
+ await page.getByRole('button',{name:/Offline two/}).waitFor();
+ assert.equal(await page.getByRole('button',{name:/Offline one/}).count(),0);
+ await page.reload();await page.getByRole('tab',{name:'Inventory',exact:true}).click();await page.getByRole('button',{name:/Offline two/}).waitFor();
+ assert.equal(await page.locator('.mobile-record img').count(),1);
  await context.setOffline(false);await page.getByText('All items synced',{exact:true}).waitFor();
  const rows=(await e.DB.prepare('SELECT * FROM appliances').all()).results;assert.equal(rows.length,2);
  for(const row of rows){const record=JSON.parse(row.payload);assert.ok(await e.BUCKET.get(record.frontKey));assert.ok(await e.BUCKET.get(record.tagKey))}
- assert.equal(JSON.parse(rows.find(row=>JSON.parse(row.payload).brand==='Offline two').payload).status,'ready');
+ const processed=JSON.parse(rows.find(row=>JSON.parse(row.payload).brand==='Offline two').payload);
+ assert.equal(processed.status,'ready');assert.ok(processed.exportedAt);assert.deepEqual(processed.exportKinds,['inventory','korona']);
+ assert.equal(JSON.parse(rows.find(row=>JSON.parse(row.payload).brand==='Offline one').payload).exportedAt,undefined);
+ // A second device gets the persisted workflow split from the server.
+ const other=await browser.newContext({viewport:{width:1280,height:900}});t.after(()=>other.close());const desktop=await other.newPage();
+ await desktop.goto(origin);await desktop.getByRole('button',{name:/Offline one/}).waitFor();
+ assert.equal(await desktop.getByRole('button',{name:/Offline two/}).count(),0);
+ await desktop.getByRole('tab',{name:'Inventory',exact:true}).click();await desktop.getByRole('button',{name:/Offline two/}).waitFor();
  await page.reload();assert.equal((await e.DB.prepare('SELECT * FROM appliances').all()).results.length,2);
 });
 

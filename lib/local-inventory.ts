@@ -27,10 +27,26 @@ function client(entry:Entry):Appliance{return {...entry.record,syncState:entry.s
 export async function localRecords(){return (await allEntries()).sort((a,b)=>b.savedAt.localeCompare(a.savedAt)).map(client)}
 export async function queueIntake(draft:IntakeDraft){
  const {localFront,localTag,syncState,syncError,...record}=draft.record;
- const entry=await mutate(record.id,previous=>({id:record.id,record:{...record,revision:record.revision??previous?.record.revision},front:draft.front??localFront,tag:draft.tag??localTag,version:crypto.randomUUID(),state:'pending',error:'',savedAt:new Date().toISOString()}));
+ const entry=await mutate(record.id,previous=>({id:record.id,record:{...record,revision:record.revision??previous?.record.revision,...(previous?.record.exportedAt?{exportedAt:previous.record.exportedAt,exportKinds:previous.record.exportKinds}:{})},front:draft.front??localFront,tag:draft.tag??localTag,version:crypto.randomUUID(),state:'pending',error:'',savedAt:new Date().toISOString()}));
  // Ask the browser to retain offline records; denial never pretends the save failed.
  void navigator.storage?.persist?.().catch(()=>false);
  return client(entry!);
+}
+export type ExportMark={record:Appliance;kinds:Array<'inventory'|'korona'>};
+export async function markRecordsExported(marks:ExportMark[],at:string):Promise<Appliance[]>{
+ const db=await open();return new Promise((resolve,reject)=>{
+  const tx=db.transaction('records','readwrite'),store=tx.objectStore('records'),updated:Appliance[]=[];let failure='';
+  for(const mark of marks){const request=store.get(mark.record.id);request.onsuccess=()=>{
+   const current:Entry|undefined=request.result;
+   if(!current){failure='A selected item is no longer stored on this device. Refresh and export it again.';tx.abort();return}
+   // Merge export metadata into the latest local entry, preserving edits and
+   // upload checkpoints made while the export window was open.
+   const next:Entry={...current,record:{...current.record,exportedAt:at,exportKinds:mark.kinds},version:crypto.randomUUID(),state:current.state==='error'?'error':'pending',savedAt:new Date().toISOString()};
+   store.put(next);updated.push(client(next));
+  }}
+  tx.oncomplete=()=>{db.close();changed();resolve(updated)};
+  tx.onerror=()=>{db.close();reject(tx.error)};tx.onabort=()=>{db.close();reject(Error(failure||'The export files are prepared, but their processing status could not be saved. Free some device storage and retry.'))};
+ });
 }
 export async function mergeRemoteRecords(records:Appliance[],snapshotStarted=Date.now()){
  const db=await open();await new Promise<void>((resolve,reject)=>{
