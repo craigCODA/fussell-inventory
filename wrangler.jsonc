@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "fussell-inventory",
+  "main": "worker/index.mjs",
+  "compatibility_date": "2026-05-15",
+  "keep_vars": true,
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "fussell-inventory-db",
+    "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+    "migrations_dir": "migrations"
+  }],
+  "r2_buckets": [{"binding": "BUCKET", "bucket_name": "fussell-inventory-photos"}],
+  "observability": {"enabled": true}
+}

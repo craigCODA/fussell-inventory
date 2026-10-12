@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.wrangler/
+.worker-check/
+.env*
+.dev.vars*
+*.log
+*.tsbuildinfo
+.DS_Store

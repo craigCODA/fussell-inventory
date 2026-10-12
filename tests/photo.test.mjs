@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {rotationLayout} from '../lib/rotation.mjs';
+test('quarter turns preserve the whole photo and swap dimensions',()=>{assert.deepEqual(rotationLayout(1200,1800,1),{width:1800,height:1200,angle:Math.PI/2});assert.deepEqual(rotationLayout(1200,1800,2),{width:1200,height:1800,angle:Math.PI});assert.deepEqual(rotationLayout(1200,1800,-1),{width:1800,height:1200,angle:3*Math.PI/2});assert.deepEqual(rotationLayout(1200,1800,4),{width:1200,height:1800,angle:0});});

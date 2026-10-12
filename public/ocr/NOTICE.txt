@@ -1,0 +1,1 @@
+Tesseract.js 6.0.1, Tesseract.js-core 6.0.0 and English tessdata (best integer) distributed under Apache-2.0. See accompanying LICENSE files and bundle notices. https://github.com/naptha/tesseract.js https://github.com/naptha/tesseract.js-core https://github.com/tesseract-ocr/tessdata_best
