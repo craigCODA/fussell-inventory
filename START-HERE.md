@@ -110,6 +110,10 @@ An export date records that files were prepared and their downloads requested. I
 
 Moving an exported item to Inventory works offline and syncs when the app reconnects. If the move cannot be saved to device storage, the app keeps the file links available and offers **Retry moving to inventory**.
 
+Inventory has no Delete option. Use **Archived** to remove processed items from active lists while keeping their details and photos. The server also blocks deletion of processed items, including archived ones.
+
+Unprocessed entries in Recieving can still be permanently deleted after confirmation while online and synced. This affects this app only; it sends nothing to KORONA. A rejected deletion keeps the local entry and draft edits. If an older open version asks you to refresh before deleting, reload the app. Live KORONA synchronization remains unconnected, and future integration must exclude app deletions from outbound operations.
+
 ## Test offline intake
 
 1. Open the app online and wait for **Offline access ready**.

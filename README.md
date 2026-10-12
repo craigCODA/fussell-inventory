@@ -14,7 +14,7 @@ Appliance intake and inventory for iPhone, Android and desktop browsers. Start w
 - Recieving holds incoming appliances; Inventory holds exported appliances. Export dates persist locally and sync between devices without changing appliance status or store location.
 - One export action prepares two separate CSV downloads: complete inventory for all selected records and KORONA products with prices for eligible ready records. Exports work offline, with individual download links for browsers that restrict multiple downloads. Stock receipt remains a separate operation.
 - Export selection follows the current view; archived or filtered-out entries stop counting as selected.
-- Confirmed permanent deletion from an entry's Review step while online and synced, including unused attached photos. Archived entries can be found through the status filter. A deletion audit entry is retained.
+- Confirmed permanent deletion of unprocessed Recieving entries while online and synced, including unused attached photos. Processed Inventory has no Delete option and the API rejects deletion even after archiving. Archived entries remain available through the status filter. A deletion audit entry is retained.
 
 ## Architecture
 
@@ -52,7 +52,7 @@ Node 22.13+ is required. `npm run dev` serves the interface only; authenticated 
 
 Open the app online once and wait for **Offline access ready** before relying on offline reopening. Saved items, including ready records, can then be created and edited offline. One unfinished intake draft is also kept per browser. Locally captured photos stay with each saved item; photos captured on other devices are available offline only after this browser has loaded them.
 
-Sync runs when the app is open, on reconnect/reopen and periodically while visible. Closing the browser does not guarantee background uploads. Expired sign-in leaves items queued until the user signs in again. Validation or revision conflicts remain visible for review; automatic retries do not overwrite conflicting records. Permanent deletion currently requires the item to be synced and the device online.
+Sync runs when the app is open, on reconnect/reopen and periodically while visible. Closing the browser does not guarantee background uploads. Expired sign-in leaves items queued until the user signs in again. Validation or revision conflicts remain visible for review; automatic retries do not overwrite conflicting records. Permanent deletion requires an unprocessed Recieving item to be synced and the device online. Use Archive for processed Inventory.
 
 Browser storage is finite. The app requests persistent storage where supported, but private browsing, clearing site data, device loss or browser eviction can remove unsynced work. A failed local write never reports a local save; when online, the existing direct server save is used as a fallback. First use of OCR downloads its files. Camera and dictation depend on device/browser support; typing and photo selection remain available.
 
@@ -61,5 +61,13 @@ CSV generation works from the local records. Photo links for newly captured imag
 The app moves records to Inventory after preparing their CSV files and requesting the downloads. Browsers do not confirm that a user kept the files, and this does not confirm a KORONA import. Only records included in a generated file are marked; an inventory-only export can include drafts. Files can be exported again from Inventory. If export tracking fails to save, the prepared files remain available with a retry button, and no successful move is reported. Export tracking requires working device storage. Earlier downloads were not tracked, so existing records start in Recieving until exported again. The legacy read-only API export endpoint does not mark records as processed.
 
 Google Drive sync and direct KORONA synchronization are not connected. General CSV photo links require app access. KORONA categories, price-group mapping and receiving workflow must be confirmed for the store. Data entered in the earlier hosted test is not automatically migrated.
+
+## Deletion boundary
+
+`POST /api/records/delete` requires `target: "app"`, the record ID and its current revision. A KORONA, unknown or omitted target receives HTTP 403 before data changes. A saved `exportedAt` marker receives HTTP 409 before data changes, including when the record is archived. Older open clients without the explicit target must refresh before deleting an unprocessed entry. The client retains its local record and unfinished draft when deletion is rejected or the response does not explicitly confirm `deleted: true`.
+
+Deletion makes no KORONA requests. The app-only deletion audit event is never an outbound KORONA operation. For any future connector, local deletion must be classified as **not applicable to KORONA synchronization**. Missing app records must never trigger remote deletion, deactivation, archiving, or stock adjustments. The connector must enforce this at its request boundary, including destructive operations encoded in POST or batch requests. Product creation and any approved updates need their own explicit operations. Future KORONA-linked records must receive the same deletion protection as processed Inventory before live synchronization is enabled.
+
+Regression tests verify protected requests leave database rows, revisions, audit history and photos unchanged, that app-only deletion makes no outbound HTTP calls, and that rejection preserves local records and draft edits. These rules do not provide Trash or independent backups for unprocessed entries; their confirmed app-only deletion remains permanent.
 
 The OCR assets under `public/ocr` include their licenses. The embedded `.wasm.js` distributions contain their own WebAssembly; duplicate standalone binaries are omitted.

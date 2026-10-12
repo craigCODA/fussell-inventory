@@ -104,3 +104,30 @@ test('export tracking failure keeps files available and offers a retry without c
  await page.getByRole('button',{name:'Retry moving to inventory',exact:true}).click();await page.getByRole('button',{name:'View inventory',exact:true}).click();
  await page.getByRole('checkbox',{name:'Select FA-READY',exact:true}).filter({visible:true}).waitFor();
 });
+
+for(const width of [390,1280])test(`processed Inventory has no delete option at ${width}px`,async t=>{
+ const {page,ready,save,open}=await fixture(t,width);
+ await save({...ready,exportedAt:'2026-10-12T15:00:00.000Z',exportKinds:['inventory','korona']});
+ await page.reload();await page.getByRole('tab',{name:'Inventory',exact:true}).click();
+ await page.getByRole('checkbox',{name:'Select FA-READY',exact:true}).filter({visible:true}).waitFor();
+ await open('FA-READY');
+ assert.equal(await page.getByRole('button',{name:/Delete/}).count(),0);
+ assert.ok((await page.getByLabel('Inventory status',{exact:true}).locator('option').allTextContents()).includes('Archived'));
+});
+
+for(const response of [{status:403,body:{error:'Deletion denied. Nothing was changed.'}},{status:200,body:{deleted:false}}])test(`unconfirmed deletion (${response.status}) preserves the record, draft edits and local copy`,async t=>{
+ const {page,open,e,draft}=await fixture(t,390);let sent;
+ await page.route('**/api/records/delete',async route=>{sent=route.request().postDataJSON();await route.fulfill({status:response.status,contentType:'application/json',body:JSON.stringify(response.body)})});
+ await open('FA-OLD');await page.getByLabel('Inventory ID',{exact:true}).fill('FA-EDIT-KEPT');
+ await page.getByRole('button',{name:'Delete appliance',exact:true}).click();await page.getByRole('button',{name:'Delete permanently',exact:true}).click();
+ await page.getByRole('alert').waitFor();
+ assert.equal(sent.target,'app');
+ assert.equal(await page.getByRole('dialog',{name:'Edit appliance',exact:true}).isVisible(),true);
+ assert.equal(await page.getByLabel('Inventory ID',{exact:true}).inputValue(),'FA-EDIT-KEPT');
+ assert.ok(await e.DB.prepare('SELECT * FROM appliances WHERE id=?').bind(draft.id).first());
+ await page.getByText('Draft saved on this device',{exact:true}).waitFor();
+ const local=await page.evaluate(id=>new Promise((resolve,reject)=>{const request=indexedDB.open('fussell-inventory',1);request.onerror=()=>reject(request.error);request.onsuccess=()=>{const db=request.result,tx=db.transaction('records'),get=tx.objectStore('records').get(id);tx.oncomplete=()=>{resolve(get.result);db.close()}}}),draft.id);
+ assert.equal(local.record.id,draft.id);
+ await page.reload();await page.getByRole('button',{name:/Continue draft/}).click();
+ assert.equal(await page.getByLabel('Inventory ID',{exact:true}).inputValue(),'FA-EDIT-KEPT');
+});
