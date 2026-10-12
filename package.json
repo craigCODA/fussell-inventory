@@ -13,7 +13,7 @@
     "check:deploy": "wrangler deploy --dry-run --outdir .worker-check",
     "deploy": "wrangler deploy",
     "db:migrate": "wrangler d1 migrations apply fussell-inventory-db --remote",
-    "test:browser": "node --test tests/browser/*.test.mjs"
+    "test:browser": "npm run build && node --test tests/browser/*.test.mjs"
   },
   "dependencies": {
     "jose": "6.1.3",

@@ -100,9 +100,19 @@ The app verifies token signature, expiration, issuer and audience. An unprotecte
 6. Upload your voice clips through **Spoken instructions**.
 7. Export one ready record and verify the KORONA field mapping before importing a batch.
 
+## Test offline intake
+
+1. Open the app online and wait for **Offline access ready**.
+2. Turn on airplane mode. Create an appliance, include both photos, and choose **Save draft** or complete the review and choose **Save as ready**.
+3. Create a second item. Both should show **Saved on device · Waiting to sync**.
+4. Reload the app while still offline and check that both items and their photos remain. CSV exports should still work.
+5. Reconnect with the app open. Wait for **All items synced**, then check the records on a second device. If sign-in expired, sign in again to let the queue resume.
+
+Use the same browser and keep its site data until everything has synced. Browser storage has limits; a storage error will tell you the item has not been saved. Uploads resume while the app is open or when it is reopened, rather than relying on background work after the browser closes. KORONA access is not required for any of these steps.
+
 ## What is already checked
 
-The shared inventory logic has automated coverage for identifiers, pricing, CSV, stored records, duplicate identifiers, revisions and upload retries. The standalone version adds signed-token authentication tests and a Cloudflare deployment dry run. Physical iPhone/Android camera, microphone and final account integration checks still require the devices and your Cloudflare account.
+The shared inventory logic has automated coverage for identifiers, pricing, CSV, stored records, duplicate identifiers, revisions and upload retries. Browser regressions cover offline photos and multiple entries, reload/reconnection, offline KORONA CSV generation, expired sign-in, a lost save response and failed local storage. The standalone version also has signed-token authentication tests and a Cloudflare deployment dry run. Physical iPhone/Android camera, microphone and final account integration checks still require the devices and your Cloudflare account.
 
 ## Reference documentation
 
