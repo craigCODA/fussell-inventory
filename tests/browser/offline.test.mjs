@@ -19,7 +19,7 @@ async function fixture(t){
    if(url.pathname.startsWith('/api/')){
     if(!state.auth){res.writeHead(401,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'Sign in again.'}));return}
     const chunks=[];for await(const chunk of req)chunks.push(chunk);
-    const body=Buffer.concat(chunks);const response=await handleApi(new Request(url,{method:req.method,headers:req.headers,...body.length?{body}:{}}),e,{userId:'offline-test'});
+    const body=Buffer.concat(chunks);const response=await handleApi(new Request(url,{method:req.method,headers:req.headers,...body.length?{body}:{}}),e,{userId:'offline-test',email:'operator@example.com'});
     if(url.pathname==='/api/upload')state.uploads++;
     if(url.pathname==='/api/records'&&req.method==='POST'&&state.dropSave){state.dropSave=false;state.auth=false;res.destroy();return}
     res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));return;
@@ -49,7 +49,7 @@ async function createItem(page,name,ready=false){
   await page.getByRole('checkbox',{name:'I checked the label photo and confirm the entered model number.'}).check();
   await page.getByRole('checkbox',{name:'I checked the label photo and confirm the entered serial number.'}).check();
   await page.getByRole('button',{name:/3 Details/}).click();
-  await page.getByLabel('Condition',{exact:true}).fill('Good');await page.getByLabel('Location',{exact:true}).fill('Store');await page.getByLabel('Selling price · USD',{exact:true}).fill('25');
+  await page.getByLabel('Current store',{exact:true}).selectOption('BA');await page.getByLabel('Condition',{exact:true}).fill('Good');await page.getByLabel('Location',{exact:true}).fill('Store');await page.getByLabel('Selling price · USD',{exact:true}).fill('25');
   await page.getByRole('button',{name:/4 Review/}).click();await page.getByRole('button',{name:'Save as ready',exact:true}).click();
  }else await page.getByRole('button',{name:'Save draft',exact:true}).click();
  await page.getByRole('dialog',{name:'New appliance intake',exact:true}).waitFor({state:'hidden'});
@@ -62,28 +62,23 @@ test('two offline entries and their photos survive a reload and sync after recon
  await page.getByText('2 waiting to sync',{exact:true}).waitFor();
  await page.reload();await page.getByRole('button',{name:/Offline one/}).waitFor();await page.getByRole('button',{name:/Offline two/}).waitFor();
  assert.equal(await page.locator('.mobile-record img').count(),2);
- const ready=page.locator('.mobile-record').filter({hasText:'Offline two'});
- await ready.getByRole('checkbox').check();await page.getByRole('button',{name:'Export (1)',exact:true}).click();
- const downloads=[];page.on('download',d=>downloads.push(d));
- await page.getByRole('button',{name:'Download both CSVs',exact:true}).click();
- await page.getByRole('button',{name:'View inventory',exact:true}).click();
- assert.equal(downloads.length,2);
- for(const download of downloads){const csv=await fs.readFile(await download.path(),'utf8');assert.ok(csv.includes('Offline two'));if(download.suggestedFilename().includes('korona'))assert.ok(csv.includes('25.00'));assert.ok(!csv.includes('Offline one'))}
- await page.getByRole('button',{name:/Offline two/}).waitFor();
- assert.equal(await page.getByRole('button',{name:/Offline one/}).count(),0);
- await page.reload();await page.getByRole('tab',{name:'Inventory',exact:true}).click();await page.getByRole('button',{name:/Offline two/}).waitFor();
- assert.equal(await page.locator('.mobile-record img').count(),1);
+ assert.equal(await page.getByRole('button',{name:/^Export/}).count(),0);
  await context.setOffline(false);await page.getByText('All items synced',{exact:true}).waitFor();
  const rows=(await e.DB.prepare('SELECT * FROM appliances').all()).results;assert.equal(rows.length,2);
- for(const row of rows){const record=JSON.parse(row.payload);assert.ok(await e.BUCKET.get(record.frontKey));assert.ok(await e.BUCKET.get(record.tagKey))}
- const processed=JSON.parse(rows.find(row=>JSON.parse(row.payload).brand==='Offline two').payload);
- assert.equal(processed.status,'ready');assert.ok(processed.exportedAt);assert.deepEqual(processed.exportKinds,['inventory','korona']);
- assert.equal(JSON.parse(rows.find(row=>JSON.parse(row.payload).brand==='Offline one').payload).exportedAt,undefined);
- // A second device gets the persisted workflow split from the server.
- const other=await browser.newContext({viewport:{width:1280,height:900}});t.after(()=>other.close());const desktop=await other.newPage();
- await desktop.goto(origin);await desktop.getByRole('button',{name:/Offline one/}).waitFor();
- assert.equal(await desktop.getByRole('button',{name:/Offline two/}).count(),0);
- await desktop.getByRole('tab',{name:'Inventory',exact:true}).click();await desktop.getByRole('button',{name:/Offline two/}).waitFor();
+ for(const row of rows){const record=JSON.parse(row.payload);assert.ok(await e.BUCKET.get(record.frontKey));assert.ok(await e.BUCKET.get(record.tagKey));assert.equal(record.exportedAt,undefined);assert.match(record.inventoryId,/^TMP-/)}
+ // The designated desktop processes the phone's synced receiving record.
+ const other=await browser.newContext({viewport:{width:1280,height:900}});t.after(()=>other.close());const desktop=await other.newPage();desktop.setDefaultTimeout(7000);
+ await desktop.goto(origin);await desktop.getByRole('button',{name:/Offline two/}).waitFor();await desktop.getByText('All items synced',{exact:true}).waitFor();
+ const id=JSON.parse(rows.find(row=>JSON.parse(row.payload).brand==='Offline two').payload).inventoryId;
+ await desktop.getByRole('checkbox',{name:'Select '+id,exact:true}).filter({visible:true}).check();await desktop.getByRole('button',{name:'Export (1)',exact:true}).click();
+ await desktop.getByRole('button',{name:'Download both CSVs',exact:true}).click();await desktop.getByRole('button',{name:'View inventory',exact:true}).click();
+ const processed=JSON.parse((await e.DB.prepare("SELECT payload FROM appliances WHERE inventory_id NOT LIKE ? AND json_extract(payload,'$.brand')=?").bind('TMP-%','Offline two').first()).payload);
+ assert.ok(processed.exportedAt);assert.match(processed.inventoryId,/^FA-OTBA\d{8}001$/);
+ await page.reload();await page.getByRole('tab',{name:'Inventory',exact:true}).click();await page.getByRole('button',{name:/Offline two/}).waitFor();assert.equal(await page.locator('.mobile-record img').count(),1);
+ // Previously processed copies stay downloadable on the authorized desktop offline.
+ await desktop.getByText('Offline access ready',{exact:true}).waitFor();await other.setOffline(true);await desktop.reload();await desktop.getByRole('tab',{name:'Inventory',exact:true}).click();await desktop.getByRole('checkbox',{name:'Select '+processed.inventoryId,exact:true}).filter({visible:true}).check();await desktop.getByRole('button',{name:'Export (1)',exact:true}).click();
+ const downloads=[];desktop.on('download',d=>downloads.push(d));await desktop.getByRole('button',{name:'Download both CSV copies',exact:true}).click();await desktop.getByRole('button',{name:'View inventory',exact:true}).waitFor();assert.equal(downloads.length,2);
+ for(const download of downloads){const csv=await fs.readFile(await download.path(),'utf8');assert.ok(csv.includes(processed.inventoryId));assert.ok(!csv.includes('TMP-'))}
  await page.reload();assert.equal((await e.DB.prepare('SELECT * FROM appliances').all()).results.length,2);
 });
 

@@ -15,3 +15,12 @@
 
 .location-choices{display:grid;gap:6px;margin-bottom:8px}.location-choices .button{justify-content:flex-start;min-height:44px;white-space:normal;text-align:left;line-height:1.4;padding:8px 10px;font-size:12px}.location-choices .button[aria-pressed=true]{background:#e8f1ea;border-color:var(--teal);color:var(--teal)}
 .workspace-tabs{display:flex;gap:8px;margin-bottom:28px;border-bottom:1px solid var(--line)}.workspace-tabs button{display:flex;align-items:center;gap:9px;min-height:48px;padding:12px 18px;border-bottom:3px solid transparent;color:#687a65;font-size:14px}.workspace-tabs button[aria-selected=true]{border-color:var(--teal);color:var(--teal);font-weight:700;background:#edf4ee;border-radius:8px 8px 0 0}.workspace-tabs small{padding:2px 6px;border-radius:5px;background:#e8eee5;font-size:11px}.nav-item .nav-name{margin:0;border:0;padding:0;text-align:left;font-size:12px}.export-option p.export-hint{font-size:11px;margin:12px 0 0}.export-result{display:grid;gap:18px;margin-bottom:24px}.export-result p{font-size:13px;color:#687a65}.export-result p[role=status]{color:var(--teal);font-weight:600}.export-result>.button{justify-self:start}.export-files{display:grid;gap:10px}.export-files .button{justify-content:flex-start;white-space:normal;text-align:left}.export-files small{display:block;font-size:10px;overflow-wrap:anywhere;font-weight:400;margin-top:5px;color:#687a65}.export-date{color:#687a65;font-size:10px;margin-top:10px}@media(max-width:640px){.workspace-tabs{margin-bottom:23px;gap:0}.workspace-tabs button{flex:1;justify-content:center;padding:12px 8px;font-size:13px}.export-option .button-row>.button{width:100%}}
+
+.export-history-entry{padding:20px 0;border-bottom:1px solid var(--border,#dce5df)}
+.export-history-entry h3{font-size:18px;margin:0 0 10px}
+.export-history-entry p{overflow-wrap:anywhere}
+.export-selection{margin:18px 0}
+.export-selection summary{cursor:pointer;font-weight:600}
+.export-selection ul{max-height:240px;overflow:auto;padding-left:24px}
+.export-selection li{margin:12px 0;overflow-wrap:anywhere}
+.export-access-note{padding:8px 12px}

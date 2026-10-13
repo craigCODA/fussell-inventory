@@ -136,3 +136,10 @@ The shared inventory logic has automated coverage for identifiers, pricing, CSV,
 - Cloudflare Access applications: https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/self-hosted-public-app/
 - Email PIN login: https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/one-time-pin/
 - Access token validation: https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/validating-json/
+
+
+## Designate the desktop exporter
+
+In the `fussell-inventory` Worker, open Settings → Variables and Secrets and set the text variable `EXPORTER_EMAIL` to the chosen operator’s exact Cloudflare Access sign-in email. Keep that email allowed by your Access policy. Refresh the desktop app after saving. Export and reversal controls are shown only for that account in the desktop workspace. Everyone else can continue receiving and syncing. Without this setting, exports and reversals remain disabled.
+
+New product numbers are assigned on the first connected desktop export, using receiving store, type and receiving date. Mixed-store selections require an override reason. Export history can reverse a batch or selected items back into Recieving while preserving their permanent numbers. Reversal does not undo downloaded files or a completed KORONA import.

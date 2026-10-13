@@ -1,3 +1,4 @@
+import {mergeWorkflow,workflowFields,isProcessed} from './numbering.mjs';
 import {api,upload,type Appliance,type IntakeDraft} from './types';
 import {syncQueuedEntry,reconcileSyncedEntry} from './sync-queue.mjs';
 
@@ -6,8 +7,8 @@ const channel=typeof BroadcastChannel!=='undefined'?new BroadcastChannel('fussel
 if(channel)channel.onmessage=()=>window.dispatchEvent(new Event('inventory-local-change'));
 const changed=()=>{window.dispatchEvent(new Event('inventory-local-change'));channel?.postMessage('changed')};
 function open():Promise<IDBDatabase>{return new Promise((resolve,reject)=>{
- const request=indexedDB.open('fussell-inventory',1);
- request.onupgradeneeded=()=>request.result.createObjectStore('records',{keyPath:'id'});
+ const request=indexedDB.open('fussell-inventory',2);
+ request.onupgradeneeded=()=>{for(const name of ['records','exports'])if(!request.result.objectStoreNames.contains(name))request.result.createObjectStore(name,{keyPath:'id'})};
  request.onsuccess=()=>{request.result.onversionchange=()=>request.result.close();resolve(request.result)};
  request.onerror=()=>reject(request.error);
  request.onblocked=()=>reject(Error('Close another inventory tab to update device storage.'));
@@ -27,25 +28,42 @@ function client(entry:Entry):Appliance{return {...entry.record,syncState:entry.s
 export async function localRecords(){return (await allEntries()).sort((a,b)=>b.savedAt.localeCompare(a.savedAt)).map(client)}
 export async function queueIntake(draft:IntakeDraft){
  const {localFront,localTag,syncState,syncError,...record}=draft.record;
- const entry=await mutate(record.id,previous=>({id:record.id,record:{...record,revision:record.revision??previous?.record.revision,...(previous?.record.exportedAt?{exportedAt:previous.record.exportedAt,exportKinds:previous.record.exportKinds}:{})},front:draft.front??localFront,tag:draft.tag??localTag,version:crypto.randomUUID(),state:'pending',error:'',savedAt:new Date().toISOString()}));
+ const entry=await mutate(record.id,previous=>({id:record.id,record:{...record,revision:record.revision??previous?.record.revision,...(previous&&isProcessed(previous.record)?workflowFields(previous.record):{})},front:draft.front??localFront,tag:draft.tag??localTag,version:crypto.randomUUID(),state:'pending',error:'',savedAt:new Date().toISOString()}));
  // Ask the browser to retain offline records; denial never pretends the save failed.
  void navigator.storage?.persist?.().catch(()=>false);
  return client(entry!);
 }
-export type ExportMark={record:Appliance;kinds:Array<'inventory'|'korona'>};
-export async function markRecordsExported(marks:ExportMark[],at:string):Promise<Appliance[]>{
- const db=await open();return new Promise((resolve,reject)=>{
-  const tx=db.transaction('records','readwrite'),store=tx.objectStore('records'),updated:Appliance[]=[];let failure='';
-  for(const mark of marks){const request=store.get(mark.record.id);request.onsuccess=()=>{
-   const current:Entry|undefined=request.result;
-   if(!current){failure='A selected item is no longer stored on this device. Refresh and export it again.';tx.abort();return}
-   // Merge export metadata into the latest local entry, preserving edits and
-   // upload checkpoints made while the export window was open.
-   const next:Entry={...current,record:{...current.record,exportedAt:at,exportKinds:mark.kinds},version:crypto.randomUUID(),state:current.state==='error'?'error':'pending',savedAt:new Date().toISOString()};
-   store.put(next);updated.push(client(next));
-  }}
-  tx.oncomplete=()=>{db.close();changed();resolve(updated)};
-  tx.onerror=()=>{db.close();reject(tx.error)};tx.onabort=()=>{db.close();reject(Error(failure||'The export files are prepared, but their processing status could not be saved. Free some device storage and retry.'))};
+export type ExportEvent={id:string;kind:'export'|'reversal';at:string;by:string;recordIds:string[];count:number;format?:'inventory'|'korona'|'both';records?:Appliance[];stores?:Array<{code:string;name:string;count:number}>;reason?:string;overrideReason?:string;originalBatches?:string[];reversedIds?:string[]};
+export async function cacheExportEvent(event:ExportEvent){
+ const db=await open();return new Promise<void>((resolve,reject)=>{
+  const tx=db.transaction('exports','readwrite'),store=tx.objectStore('exports'),request=store.get(event.id);
+  request.onsuccess=()=>{const previous=request.result as ExportEvent|undefined;store.put({...previous,...event,...(previous?.reversedIds||event.reversedIds?{reversedIds:[...new Set([...(previous?.reversedIds||[]),...(event.reversedIds||[])])]}:{})})};
+  if(event.kind==='reversal')for(const id of event.originalBatches||[]){const original=store.get(id);original.onsuccess=()=>{const batch=original.result as ExportEvent|undefined;if(batch)store.put({...batch,reversedIds:[...new Set([...(batch.reversedIds||[]),...event.recordIds.filter(id=>batch.recordIds.includes(id))])]})}};
+  tx.oncomplete=()=>{db.close();resolve()};tx.onabort=tx.onerror=()=>{db.close();reject(tx.error)};
+ });
+}
+export async function localExportEvents():Promise<ExportEvent[]>{
+ const db=await open();return new Promise((resolve,reject)=>{const tx=db.transaction('exports','readonly'),request=tx.objectStore('exports').getAll();tx.oncomplete=()=>{db.close();resolve(request.result.sort((a:ExportEvent,b:ExportEvent)=>b.at.localeCompare(a.at)))};tx.onabort=tx.onerror=()=>{db.close();reject(tx.error)}});
+}
+export async function applyWorkflowResult(records:Appliance[],expected:Array<{id:string;revision?:number}>){
+ const revisions=new Map(expected.map(r=>[r.id,r.revision]));
+ for(const record of records)await mutate(record.id,current=>{
+  if(!current)return {id:record.id,record,version:crypto.randomUUID(),state:'synced',savedAt:record.updatedAt||new Date().toISOString(),syncedAt:Date.now()};
+  if((current.record.revision||0)>(record.revision||0))return current;
+  const edited=current.state!=='synced';
+  return {...current,record:edited?{...mergeWorkflow(current.record,record),revision:current.record.revision===revisions.get(record.id)?record.revision:current.record.revision}:record,version:crypto.randomUUID(),state:edited?current.state:'synced',syncedAt:Date.now()};
+ });
+ return localRecords();
+}
+export async function recordsForExport(selection:Appliance[]){
+ if(!navigator.onLine)throw Error('Connect the desktop to process an export. Receiving and photos remain saved offline.');
+ await syncInventory();
+ const records=await localRecords(),byId=new Map(records.map(r=>[r.id,r]));
+ return selection.map(original=>{
+  const current=byId.get(original.id);
+  if(!current||current.syncState!=='synced'||!current.revision)throw Error('Sync each selected appliance before exporting. '+(current?.syncError||'Your items remain on this device.'));
+  for(const field of ['type','fuel','storeCode','receivingStore','receivedDate','brand','model','serial','status','price','cost','condition','testStatus','location','bin','notes'] as const)if((current[field]||'')!==(original[field]||''))throw Error('A selected appliance changed. Close export and review your selection again.');
+  return current;
  });
 }
 export async function mergeRemoteRecords(records:Appliance[],snapshotStarted=Date.now()){
@@ -53,7 +71,10 @@ export async function mergeRemoteRecords(records:Appliance[],snapshotStarted=Dat
   const tx=db.transaction('records','readwrite'),store=tx.objectStore('records'),request=store.getAll();
   request.onsuccess=()=>{
    const local=new Map<string,Entry>(request.result.map((e:Entry)=>[e.id,e])),ids=new Set(records.map(r=>r.id));
-   for(const record of records){const previous=local.get(record.id);if(previous&&(previous.state!=='synced'||(previous.syncedAt||0)>snapshotStarted))continue;
+   for(const record of records){const previous=local.get(record.id);if(previous&&(previous.state!=='synced'||(previous.syncedAt||0)>snapshotStarted)){
+     if(previous.state!=='synced'&&(record.workflowRevision||0)>(previous.record.workflowRevision||0))store.put({...previous,record:mergeWorkflow(previous.record,record),version:crypto.randomUUID()});
+     continue;
+    }
     store.put({id:record.id,record,version:previous?.version||crypto.randomUUID(),state:'synced',error:'',syncedAt:Date.now(),savedAt:record.updatedAt||new Date().toISOString(),front:previous?.record.frontKey===record.frontKey?previous?.front:undefined,tag:previous?.record.tagKey===record.tagKey?previous?.tag:undefined});
    }
    for(const previous of local.values())if(previous.state==='synced'&&(previous.syncedAt||0)<=snapshotStarted&&!ids.has(previous.id))store.delete(previous.id);

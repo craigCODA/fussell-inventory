@@ -1,10 +1,14 @@
+import {localDate} from './numbering.mjs';
 export type Appliance={
+ storeCode?:string;receivingStore?:string;receivedDate?:string;fuel?:string;
+ numberAssignedAt?:string;numberType?:string;processedOnce?:boolean;workflowRevision?:number;exportBatchId?:string;
+ exportReversal?:{id:string;at:string;by:string;reason:string};
  exportedAt?:string;exportKinds?:Array<'inventory'|'korona'>;
  syncState?:'pending'|'synced'|'error';syncError?:string;localFront?:Blob;localTag?:Blob;
  id:string;inventoryId:string;type:string;brand:string;model:string;serial:string;location:string;bin:string;condition:string;testStatus:string;status:string;price:string;cost:string;notes:string;frontKey:string;tagKey:string;ocrModel:string;ocrSerial:string;ocrText:string;modelReviewed:boolean;serialReviewed:boolean;revision?:number;createdAt?:string;updatedAt?:string;updatedBy?:string;
 };
 export type IntakeDraft={record:Appliance;front?:Blob;tag?:Blob;step:number;savedAt:string};
-export function blankRecord():Appliance{const id=crypto.randomUUID();return {id,inventoryId:'FA-'+id.slice(0,8).toUpperCase(),type:'',brand:'',model:'',serial:'',location:'',bin:'',condition:'',testStatus:'Not tested',status:'draft',price:'',cost:'',notes:'',frontKey:'',tagKey:'',ocrModel:'',ocrSerial:'',ocrText:'',modelReviewed:false,serialReviewed:false};}
+export function blankRecord():Appliance{const id=crypto.randomUUID();return {id,inventoryId:'TMP-'+id.replaceAll('-','').toUpperCase(),receivedDate:localDate(),storeCode:'',receivingStore:'',fuel:'',type:'',brand:'',model:'',serial:'',location:'',bin:'',condition:'',testStatus:'Not tested',status:'draft',price:'',cost:'',notes:'',frontKey:'',tagKey:'',ocrModel:'',ocrSerial:'',ocrText:'',modelReviewed:false,serialReviewed:false};}
 export const mediaUrl=(key:string)=>'/api/media?key='+encodeURIComponent(key);
 async function responseJson(r:Response){
  if(!r.headers.get('content-type')?.includes('application/json'))throw Object.assign(Error(r.status>=500?'The server is temporarily unavailable. Syncing will retry.':'Your sign-in needs to be refreshed. Reopen this page; saved items stay on this device.'),{status:r.status>=500?r.status:401});

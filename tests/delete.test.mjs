@@ -69,7 +69,9 @@ test('deletion rejects a KORONA, unknown or missing target without changing any 
 
 test('processed Inventory cannot be deleted even by a direct app-only request or after archiving',async()=>{
  const e=env(),frontKey=await photo(e);
- let r=await save(e,{...record(),frontKey,exportedAt:'2026-10-12T15:00:00.000Z',exportKinds:['inventory']});
+ let r=await save(e,{...record(),frontKey});
+ await e.DB.prepare("UPDATE appliances SET payload=json_set(payload,'$.exportedAt',?,'$.exportKinds',json(?)) WHERE id=?").bind('2026-10-12T15:00:00.000Z','["inventory"]',r.id).run();
+ r={...r,exportedAt:'2026-10-12T15:00:00.000Z',exportKinds:['inventory']};
  for(const status of ['draft','archived']){
   r=await save(e,{...r,status});
   const before=await e.DB.prepare('SELECT * FROM appliances WHERE id=?').bind(r.id).first();
